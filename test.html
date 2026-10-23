@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>校舎内 WebAR 学科紹介</title>
+
+    <!-- A-Frame と MindAR の読み込み -->
+    <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
+
+    <style>
+        body { margin: 0; overflow: hidden; font-family: sans-serif; }
+        
+        /* 戻るボタン */
+        .btn-back {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 10000;
+            background-color: rgba(0, 0, 0, 0.6);
+            color: #ffffff;
+            padding: 10px 18px;
+            border-radius: 20px;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 16px;
+            border: 2px solid #ffffff;
+        }
+
+        /* 階層切り替えUI */
+        .floor-selector {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 10000;
+            display: flex;
+            gap: 6px;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 6px;
+            border-radius: 20px;
+            border: 2px solid #ffffff;
+        }
+
+        .floor-btn {
+            background: transparent;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 12px;
+            font-weight: bold;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .floor-btn.active {
+            background: #10b981;
+            color: white;
+        }
+
+        .mindar-ui-overlay, .mindar-ui-scanning {
+            display: none !important;
+        }
+
+        /* 検出枠アニメーション */
+        .scan-overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100vw; height: 100vh;
+            z-index: 10000;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .scan-overlay.active { opacity: 1; }
+
+        .corner {
+            position: absolute;
+            width: 60px; height: 60px;
+            border-color: #10b981;
+            border-style: solid;
+            transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.27);
+        }
+
+        .corner-top-left {
+            top: 50%; left: 50%;
+            border-width: 6px 0 0 6px;
+            border-top-left-radius: 16px;
+            transform: translate(-50vw, -50vh);
+        }
+        
+        .corner-top-right {
+            top: 50%; left: 50%;
+            border-width: 6px 6px 0 0;
+            border-top-right-radius: 16px;
+            transform: translate(calc(50vw - 60px), -50vh);
+        }
+
+        .corner-bottom-left {
+            top: 50%; left: 50%;
+            border-width: 0 0 6px 6px;
+            border-bottom-left-radius: 16px;
+            transform: translate(-50vw, calc(50vh - 60px));
+        }
+
+        .corner-bottom-right {
+            top: 50%; left: 50%;
+            border-width: 0 6px 6px 0;
+            border-bottom-right-radius: 16px;
+            transform: translate(calc(50vw - 60px), calc(50vh - 60px));
+        }
+
+        .scan-overlay.active .corner-top-left { transform: translate(-120px, -120px); }
+        .scan-overlay.active .corner-top-right { transform: translate(60px, -120px); }
+        .scan-overlay.active .corner-bottom-left { transform: translate(-120px, 60px); }
+        .scan-overlay.active .corner-bottom-right { transform: translate(60px, 60px); }
+
+        .scan-message {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, 140px);
+            background: rgba(16, 185, 129, 0.95);
+            color: #ffffff;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 16px;
+            white-space: nowrap;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            border: 2px solid #ffffff;
+        }
+
+        /* スタンプポップアップ */
+        .stamp-dialog-overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100vw; height: 100vh;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 20000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(5px);
+        }
+
+        .stamp-dialog-box {
+            background: #ffffff;
+            width: 85%; max-width: 340px;
+            border-radius: 20px;
+            padding: 24px 20px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.27);
+        }
+
+        @keyframes popIn {
+            0% { transform: scale(0.8); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+
+    <a href="videoMaya.html" class="btn-back">← 戻る</a>
+
+    <!-- 階層切り替えUI -->
+    <div class="floor-selector">
+        <button id="btn-1f" class="floor-btn" onclick="switchFloor('1f')">1F</button>
+        <button id="btn-2f" class="floor-btn" onclick="switchFloor('2f')">2F</button>
+        <button id="btn-3f" class="floor-btn" onclick="switchFloor('3f')">3F</button>
+        <button id="btn-4f" class="floor-btn" onclick="switchFloor('4f')">4F</button>
+        <button id="btn-5f" class="floor-btn" onclick="switchFloor('5f')">5F</button>
+    </div>
+
+    <!-- 検出アニメーションUI -->
+    <div id="scan-overlay" class="scan-overlay">
+        <div class="corner corner-top-left"></div>
+        <div class="corner corner-top-right"></div>
+        <div class="corner corner-bottom-left"></div>
+        <div class="corner corner-bottom-right"></div>
+        <div id="scan-text" class="scan-message">🔍 ターゲット検出中...</div>
+    </div>
+
+    <!-- URLパラメータから現在の階を取得して構築 -->
+    <script>
+        const floorData = {
+            '1f': { model: 'kougyo2.glb', video: 'jgvideo2.mp4', floorText: '1F' },
+            '2f': { model: 'syokutyou.glb', video: 'GameVideo.mp4', floorText: '2F' },
+            '3f': { model: 'syougyou3.glb', video: 'jgvideo2.mp4', floorText: '3F' },
+            '4f': { model: 'fukude.glb', video: 'GameVideo.mp4', floorText: '4F' },
+            '5f': { model: 'kougyo2.glb', video: 'jgvideo2.mp4', floorText: '5F' }
+        };
+
+        const urlParams = new URLSearchParams(window.location.search);
+        let selectedFloor = (urlParams.get('floor') || '1f').toLowerCase();
+        if (!floorData[selectedFloor]) selectedFloor = '1f';
+
+            const currentConfig = floorData[selectedFloor];
+
+// アセット読み込みエラー時にカメラ処理が止まるのを防止する安全処理
+window.addEventListener('error', (e) => {
+    console.warn("アセットロードエラー検知:", e.message);
+}, true);
+
+        document.write(`
+            <a-scene 
+                id="ar-scene"
+                mindar-image="imageTargetSrc: ./${selectedFloor}.mind; autoStart: true; uiLoading: no; uiError: no; filterMinCF: 0.0001; filterBeta: 0.001;" 
+                color-space="sRGB" 
+                renderer="colorManagement: true, physicallyCorrectLights: true" 
+                vr-mode-ui="enabled: false"
+                device-orientation-permission-ui="enabled: false">
+              
+                <a-assets>
+                    <video id="floor-video" src="${currentConfig.video}" loop muted playsinline webkit-playsinline preload="metadata" crossorigin="anonymous"></video>
+                    <a-asset-item id="floor-model" src="${currentConfig.model}"></a-asset-item>
+                </a-assets>
+
+                <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+
+                <!-- 光量を増やしてMayaモデルの黒潰れを回避 -->
+                <a-entity light="type: ambient; color: #ffffff; intensity: 2.5;"></a-entity>
+                <a-entity light="type: directional; color: #ffffff; intensity: 1.2;" position="1 2 1"></a-entity>
+
+                <a-entity mindar-image-target="targetIndex: 0" id="target-object">
+                    
+                    <!-- 左側: Mayaモデル (位置: X=-0.35, 手前に出す: Z=0.2) -->
+                    <a-gltf-model 
+                        src="#floor-model" 
+                        position="-0.35 0 0.2" 
+                        scale="0.5 0.5 0.5" 
+                        rotation="0 0 0">
+                    </a-gltf-model>
+
+                    <!-- 右側: 動画 (位置を中央寄り X=0.3 に補正) -->
+                    <a-video 
+                        src="#floor-video" 
+                        position="0.3 0 0" 
+                        rotation="0 0 0" 
+                        width="0.7" 
+                        height="0.4" 
+                        material="side: double;">
+                    </a-video>
+
+                </a-entity>
+            </a-scene>
+        `);
+    </script>
+
+    <!-- スタンプ獲得ポップアップ -->
+    <div id="stamp-dialog" class="stamp-dialog-overlay">
+        <div class="stamp-dialog-box">
+            <h3 style="margin-top: 0; color: #059669; font-size: 20px;">🎉 スタンプ獲得！</h3>
+            <p id="stamp-msg" style="font-size: 14px; color: #444; line-height: 1.6; margin-bottom: 20px;">
+                オブジェクトを検出して<br>キャラクターが出現しました！
+            </p>
+            <div style="display: flex; gap: 10px;">
+                <button onclick="closeStampDialog()" style="flex: 1; padding: 10px; border: none; background: #94a3b8; color: white; border-radius: 10px; font-weight: bold; cursor: pointer;">閉じる</button>
+                <button onclick="goToMap()" style="flex: 1; padding: 10px; border: none; background: #f59e0b; color: white; border-radius: 10px; font-weight: bold; cursor: pointer;">マップへGO!</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function setupTargetEvents() {
+            const scanOverlay = document.getElementById('scan-overlay');
+            const targetObject = document.getElementById('target-object');
+            const stampDialog = document.getElementById('stamp-dialog');
+            const stampMsg = document.getElementById('stamp-msg');
+            const videoEl = document.getElementById('floor-video');
+
+            const unlockAudio = () => {
+                if (videoEl && !videoEl.paused) {
+                    videoEl.muted = false;
+                }
+                window.removeEventListener('click', unlockAudio);
+                window.removeEventListener('touchstart', unlockAudio);
+            };
+            window.addEventListener('click', unlockAudio);
+            window.addEventListener('touchstart', unlockAudio);
+
+            if (targetObject) {
+                targetObject.addEventListener('targetFound', () => {
+                    document.getElementById('scan-text').textContent = `🔍 ${currentConfig.floorText} ターゲット検出！`;
+                    scanOverlay.classList.add('active');
+
+                    if (videoEl) {
+                        videoEl.play().catch(e => console.log("再生エラー:", e));
+                    }
+
+                    localStorage.setItem(`stamp-${currentConfig.floorText}-done`, '1');
+
+                    setTimeout(() => {
+                        stampMsg.innerHTML = `${currentConfig.floorText} のオブジェクトを検出して<br>キャラクターが出現しました！<br>マップを開いて確認しますか？`;
+                        stampDialog.style.display = 'flex';
+                    }, 3000);
+                });
+
+                targetObject.addEventListener('targetLost', () => {
+                    scanOverlay.classList.remove('active');
+                    
+                    if (videoEl) {
+                        videoEl.pause();
+                    }
+                });
+            }
+        }
+
+        function switchFloor(floorPrefix) {
+            if (floorPrefix === selectedFloor) return;
+            const currentPath = window.location.pathname;
+            window.location.href = `${currentPath}?floor=${floorPrefix}`;
+        }
+
+        function closeStampDialog() {
+            document.getElementById('stamp-dialog').style.display = 'none';
+        }
+
+        function goToMap() {
+            window.location.href = 'map.html';
+        }
+    </script>
+</body>
+</html>
