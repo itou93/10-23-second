@@ -184,24 +184,31 @@
 
     <!-- URLパラメータから現在の階を取得して構築 -->
     <script>
+        // 各階ごとのモデル・動画・表示サイズ(scale)・位置(pos)の設定
         const floorData = {
-            '1f': { model: 'kougyo2.glb', video: 'jgvideo2.mp4', floorText: '1F' },
-            '2f': { model: 'syokutyou.glb', video: 'GameVideo.mp4', floorText: '2F' },
-            '3f': { model: 'fukude3.glb', video: 'hukude.mp4', floorText: '3F' },
-            '4f': { model: '.glb', video: 'GameVideo.mp4', floorText: '4F' },
-            '5f': { model: 'syougyou3.glb', video: 'jgvideo2.mp4', floorText: '5F' }
+            '1f': { model: 'kougyo2.glb', video: 'jgvideo2.mp4', floorText: '1F', scale: '2.5 2.5 2.5', pos: '-0.7 0 0.2' },
+            '2f': { model: 'syokutyou.glb', video: 'GameVideo.mp4', floorText: '2F', scale: '2.5 2.5 2.5', pos: '-0.7 0 0.2' },
+            '3f': { model: 'fukude3.glb', video: 'hukude.mp4', floorText: '3F', scale: '1.2 1.2 1.2', pos: '-0.4 0 0.2' },
+            '4f': { model: 'kougyo2.glb', video: 'GameVideo.mp4', floorText: '4F', scale: '2.5 2.5 2.5', pos: '-0.7 0 0.2' },
+            '5f': { model: 'syougyou3.glb', video: 'jgvideo2.mp4', floorText: '5F', scale: '1.2 1.2 1.2', pos: '-0.4 0 0.2' }
         };
 
         const urlParams = new URLSearchParams(window.location.search);
         let selectedFloor = (urlParams.get('floor') || '1f').toLowerCase();
         if (!floorData[selectedFloor]) selectedFloor = '1f';
 
-            const currentConfig = floorData[selectedFloor];
+        const currentConfig = floorData[selectedFloor];
 
-// アセット読み込みエラー時にカメラ処理が止まるのを防止する安全処理
-window.addEventListener('error', (e) => {
-    console.warn("アセットロードエラー検知:", e.message);
-}, true);
+        window.addEventListener('DOMContentLoaded', () => {
+            const activeBtn = document.getElementById(`btn-${selectedFloor}`);
+            if (activeBtn) activeBtn.classList.add('active');
+            setupTargetEvents();
+        });
+
+        // アセット読み込みエラー時にカメラ処理が止まるのを防止する安全処理
+        window.addEventListener('error', (e) => {
+            console.warn("アセットロードエラー検知:", e.message);
+        }, true);
 
         document.write(`
             <a-scene 
@@ -214,7 +221,6 @@ window.addEventListener('error', (e) => {
               
                 <a-assets>
                     <video id="floor-video" src="${currentConfig.video}" loop muted playsinline webkit-playsinline preload="metadata" crossorigin="anonymous"></video>
-                    <a-asset-item id="floor-model" src="${currentConfig.model}"></a-asset-item>
                 </a-assets>
 
                 <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
@@ -225,18 +231,18 @@ window.addEventListener('error', (e) => {
 
                 <a-entity mindar-image-target="targetIndex: 0" id="target-object">
                     
-                    <!-- 左側: Mayaモデル (位置: X=-0.35, 手前に出す: Z=0.2) -->
+                    <!-- 左側: Mayaモデル (直接src指定して描画停止を回避、階ごとに個別サイズ指定) -->
                     <a-gltf-model 
-                        src="#floor-model" 
-                        position="-0.35 0 0.2" 
-                        scale="0.5 0.5 0.5" 
+                        src="${currentConfig.model}" 
+                        position="${currentConfig.pos}" 
+                        scale="${currentConfig.scale}" 
                         rotation="0 0 0">
                     </a-gltf-model>
 
-                    <!-- 右側: 動画 (位置を中央寄り X=0.3 に補正) -->
+                    <!-- 右側: 動画 -->
                     <a-video 
                         src="#floor-video" 
-                        position="0.3 0 0" 
+                        position="0.35 0 0" 
                         rotation="0 0 0" 
                         width="0.7" 
                         height="0.4" 
