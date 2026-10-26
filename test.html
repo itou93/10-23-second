@@ -158,6 +158,11 @@
             0% { transform: scale(0.8); opacity: 0; }
             100% { transform: scale(1); opacity: 1; }
         }
+
+        /* 動画タグが画面上に表示されるのを防ぐ非表示設定 */
+        a-assets video {
+            display: none !important;
+        }
     </style>
 </head>
 <body>
@@ -182,9 +187,24 @@
         <div id="scan-text" class="scan-message">🔍 ターゲット検出中...</div>
     </div>
 
-    <!-- URLパラメータから現在の階を取得して構築 -->
+    <!-- 動的に構築されるARシーンの挿入先 -->
+    <div id="ar-container"></div>
+
+    <!-- スタンプ獲得ポップアップ -->
+    <div id="stamp-dialog" class="stamp-dialog-overlay">
+        <div class="stamp-dialog-box">
+            <h3 style="margin-top: 0; color: #059669; font-size: 20px;">🎉 スタンプ獲得！</h3>
+            <p id="stamp-msg" style="font-size: 14px; color: #444; line-height: 1.6; margin-bottom: 20px;">
+                オブジェクトを検出して<br>キャラクターが出現しました！
+            </p>
+            <div style="display: flex; gap: 10px;">
+                <button onclick="closeStampDialog()" style="flex: 1; padding: 10px; border: none; background: #94a3b8; color: white; border-radius: 10px; font-weight: bold; cursor: pointer;">閉じる</button>
+                <button onclick="goToMap()" style="flex: 1; padding: 10px; border: none; background: #f59e0b; color: white; border-radius: 10px; font-weight: bold; cursor: pointer;">マップへGO!</button>
+            </div>
+        </div>
+    </div>
+
     <script>
-        // 各階ごとのモデル・動画・表示サイズ(scale)・位置(pos)の設定
         const floorData = {
             '1f': { model: 'kougyo2.glb', video: 'jgvideo2.mp4', floorText: '1F', scale: '2.5 2.5 2.5', pos: '-0.7 0 0.2' },
             '2f': { model: 'syokutyou.glb', video: 'GameVideo.mp4', floorText: '2F', scale: '2.5 2.5 2.5', pos: '-0.7 0 0.2' },
@@ -202,73 +222,58 @@
         window.addEventListener('DOMContentLoaded', () => {
             const activeBtn = document.getElementById(`btn-${selectedFloor}`);
             if (activeBtn) activeBtn.classList.add('active');
-            setupTargetEvents();
+            
+            buildARScene();
         });
 
-        // アセット読み込みエラー時にカメラ処理が止まるのを防止する安全処理
-        window.addEventListener('error', (e) => {
-            console.warn("アセットロードエラー検知:", e.message);
-        }, true);
+        function buildARScene() {
+            const container = document.getElementById('ar-container');
+            container.innerHTML = `
+                <a-scene 
+                    id="ar-scene"
+                    mindar-image="imageTargetSrc: ./${selectedFloor}.mind; autoStart: true; uiLoading: no; uiError: no; filterMinCF: 0.0001; filterBeta: 0.001;" 
+                    color-space="sRGB" 
+                    renderer="colorManagement: true, physicallyCorrectLights: true" 
+                    vr-mode-ui="enabled: false"
+                    device-orientation-permission-ui="enabled: false">
+                  
+                    <a-assets>
+                        <video id="floor-video" src="${currentConfig.video}" loop muted playsinline webkit-playsinline preload="metadata" crossorigin="anonymous"></video>
+                    </a-assets>
 
-        document.write(`
-            <a-scene 
-                id="ar-scene"
-                mindar-image="imageTargetSrc: ./${selectedFloor}.mind; autoStart: true; uiLoading: no; uiError: no; filterMinCF: 0.0001; filterBeta: 0.001;" 
-                color-space="sRGB" 
-                renderer="colorManagement: true, physicallyCorrectLights: true" 
-                vr-mode-ui="enabled: false"
-                device-orientation-permission-ui="enabled: false">
-              
-                <a-assets>
-                    <video id="floor-video" src="${currentConfig.video}" loop muted playsinline webkit-playsinline preload="metadata" crossorigin="anonymous"></video>
-                </a-assets>
+                    <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-                <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+                    <a-entity light="type: ambient; color: #ffffff; intensity: 2.5;"></a-entity>
+                    <a-entity light="type: directional; color: #ffffff; intensity: 1.2;" position="1 2 1"></a-entity>
 
-                <!-- 光量を増やしてMayaモデルの黒潰れを回避 -->
-                <a-entity light="type: ambient; color: #ffffff; intensity: 2.5;"></a-entity>
-                <a-entity light="type: directional; color: #ffffff; intensity: 1.2;" position="1 2 1"></a-entity>
+                    <a-entity mindar-image-target="targetIndex: 0" id="target-object">
+                        
+                        <a-gltf-model 
+                            src="${currentConfig.model}" 
+                            position="${currentConfig.pos}" 
+                            scale="${currentConfig.scale}" 
+                            rotation="0 0 0">
+                        </a-gltf-model>
 
-                <a-entity mindar-image-target="targetIndex: 0" id="target-object">
-                    
-                    <!-- 左側: Mayaモデル (直接src指定して描画停止を回避、階ごとに個別サイズ指定) -->
-                    <a-gltf-model 
-                        src="${currentConfig.model}" 
-                        position="${currentConfig.pos}" 
-                        scale="${currentConfig.scale}" 
-                        rotation="0 0 0">
-                    </a-gltf-model>
+                        <a-video 
+                            src="#floor-video" 
+                            position="0.35 0 0" 
+                            rotation="0 0 0" 
+                            width="0.7" 
+                            height="0.4" 
+                            material="side: double;">
+                        </a-video>
 
-                    <!-- 右側: 動画 -->
-                    <a-video 
-                        src="#floor-video" 
-                        position="0.35 0 0" 
-                        rotation="0 0 0" 
-                        width="0.7" 
-                        height="0.4" 
-                        material="side: double;">
-                    </a-video>
+                    </a-entity>
+                </a-scene>
+            `;
 
-                </a-entity>
-            </a-scene>
-        `);
-    </script>
+            // ARシーン生成完了後にイベント登録を確実に実行
+            setTimeout(() => {
+                setupTargetEvents();
+            }, 300);
+        }
 
-    <!-- スタンプ獲得ポップアップ -->
-    <div id="stamp-dialog" class="stamp-dialog-overlay">
-        <div class="stamp-dialog-box">
-            <h3 style="margin-top: 0; color: #059669; font-size: 20px;">🎉 スタンプ獲得！</h3>
-            <p id="stamp-msg" style="font-size: 14px; color: #444; line-height: 1.6; margin-bottom: 20px;">
-                オブジェクトを検出して<br>キャラクターが出現しました！
-            </p>
-            <div style="display: flex; gap: 10px;">
-                <button onclick="closeStampDialog()" style="flex: 1; padding: 10px; border: none; background: #94a3b8; color: white; border-radius: 10px; font-weight: bold; cursor: pointer;">閉じる</button>
-                <button onclick="goToMap()" style="flex: 1; padding: 10px; border: none; background: #f59e0b; color: white; border-radius: 10px; font-weight: bold; cursor: pointer;">マップへGO!</button>
-            </div>
-        </div>
-    </div>
-
-    <script>
         function setupTargetEvents() {
             const scanOverlay = document.getElementById('scan-overlay');
             const targetObject = document.getElementById('target-object');
