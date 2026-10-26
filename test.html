@@ -10,7 +10,7 @@
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
 
     <style>
-        /* 画面全体の白抜けを防止し背景を黒に固定 */
+        /* 画面全体の白抜け防止 */
         html, body { 
             margin: 0; 
             padding: 0;
@@ -22,7 +22,6 @@
             background-color: #000000 !important; 
         }
 
-        /* ARコンテナおよびA-Frameシーンを画面全体に絶対配置 */
         #ar-container, a-scene {
             position: fixed !important;
             top: 0 !important;
@@ -34,7 +33,6 @@
             overflow: hidden !important;
         }
 
-        /* MindARが動的生成するCanvas・Videoの全画面フィット化 */
         .a-canvas {
             width: 100% !important;
             height: 100% !important;
@@ -56,7 +54,6 @@
             object-fit: cover !important;
         }
         
-        /* 戻るボタン */
         .btn-back {
             position: fixed;
             top: 20px;
@@ -72,7 +69,6 @@
             border: 2px solid #ffffff;
         }
 
-        /* 階層切り替えUI */
         .floor-selector {
             position: fixed;
             top: 20px;
@@ -106,7 +102,6 @@
             display: none !important;
         }
 
-        /* スタンプポップアップ */
         .stamp-dialog-overlay {
             position: fixed;
             top: 0; left: 0;
@@ -143,7 +138,6 @@
 
     <a href="videoMaya.html" class="btn-back">← 戻る</a>
 
-    <!-- 階層切り替えUI -->
     <div class="floor-selector">
         <button id="btn-1f" class="floor-btn" onclick="switchFloor('1f')">1F</button>
         <button id="btn-2f" class="floor-btn" onclick="switchFloor('2f')">2F</button>
@@ -152,10 +146,8 @@
         <button id="btn-5f" class="floor-btn" onclick="switchFloor('5f')">5F</button>
     </div>
 
-    <!-- 動的に構築されるARシーンの挿入先 -->
     <div id="ar-container"></div>
 
-    <!-- スタンプ獲得ポップアップ -->
     <div id="stamp-dialog" class="stamp-dialog-overlay">
         <div class="stamp-dialog-box">
             <h3 style="margin-top: 0; color: #059669; font-size: 20px;">🎉 スタンプ獲得！</h3>
@@ -170,14 +162,13 @@
     </div>
 
     <script>
-        // 動画の位置を中央（0 0 0）に配置し、モデルの配置（modelPos）を動画の「真上（Y軸正の方向）」に移動
-        // 座標指定: 'X軸(左右) Y軸(上下) Z軸(手前奥)' 
+        // 2F(syokutyo)モデル・動画サイズを特大指定、3F(fukude3)の描画座標(modelPos)とスケール(modelScale)を最適化
         const floorData = {
             '1f': { model: 'kougyo2.glb', video: 'jgvideo2.mp4', floorText: '1F', modelScale: '0.35 0.35 0.35', modelPos: '0 0.45 0.1', videoWidth: '0.8', videoHeight: '0.45' },
-            '2f': { model: 'syokutyou.glb', video: 'GameVideo.mp4', floorText: '2F', modelScale: '1.5 1.5 1.5', modelPos: '0 0.55 0.1', videoWidth: '1.0', videoHeight: '0.56' },
-            '3f': { model: 'fukude3.glb', video: 'hukude.mp4', floorText: '3F', modelScale: '1.0 1.0 1.0', modelPos: '0 0.45 0.1', videoWidth: '0.8', videoHeight: '0.45' },
-            '4f': { model: 'kougyo2.glb', video: 'GameVideo.mp4', floorText: '4F', modelScale: '0.35 0.35 0.35', modelPos: '0 0.55 0.1', videoWidth: '1.0', videoHeight: '0.56' },
-            '5f': { model: 'syougyou3.glb', video: 'jgvideo2.mp4', floorText: '5F', modelScale: '1.0 1.0 1.0', modelPos: '0 0.45 0.1', videoWidth: '0.8', videoHeight: '0.45' }
+            '2f': { model: 'syokutyou.glb', video: 'GameVideo.mp4', floorText: '2F', modelScale: '3.5 3.5 3.5', modelPos: '0 0.7 0.15', videoWidth: '1.4', videoHeight: '0.8' },
+            '3f': { model: 'fukude3.glb', video: 'hukude.mp4', floorText: '3F', modelScale: '2.0 2.0 2.0', modelPos: '0 0.55 0.15', videoWidth: '1.0', videoHeight: '0.56' },
+            '4f': { model: 'kougyo2.glb', video: 'GameVideo.mp4', floorText: '4F', modelScale: '0.35 0.35 0.35', modelPos: '0 0.55 0.1', videoWidth: '1.2', videoHeight: '0.68' },
+            '5f': { model: 'syougyou3.glb', video: 'jgvideo2.mp4', floorText: '5F', modelScale: '1.5 1.5 1.5', modelPos: '0 0.5 0.1', videoWidth: '0.9', videoHeight: '0.5' }
         };
 
         const urlParams = new URLSearchParams(window.location.search);
@@ -205,7 +196,8 @@
                     device-orientation-permission-ui="enabled: false">
                   
                     <a-assets>
-                        <video id="floor-video" src="${currentConfig.video}" loop muted playsinline webkit-playsinline preload="metadata" crossorigin="anonymous"></video>
+                        <!-- autoplay/playsinline/webkit-playsinline を完全付与して再生トラブル防止 -->
+                        <video id="floor-video" src="${currentConfig.video}" autoplay loop muted playsinline webkit-playsinline preload="auto" crossorigin="anonymous"></video>
                     </a-assets>
 
                     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
@@ -215,17 +207,17 @@
 
                     <a-entity mindar-image-target="targetIndex: 0" id="target-object">
                         
-                        <!-- 【動画】マーカーの中央（0 0 0）に配置 -->
+                        <!-- 動画（画面中央） -->
                         <a-video 
                             src="#floor-video" 
                             position="0 0 0" 
                             rotation="0 0 0" 
                             width="${currentConfig.videoWidth}" 
                             height="${currentConfig.videoHeight}" 
-                            material="side: double;">
+                            material="side: double; shader: flat;">
                         </a-video>
 
-                        <!-- 【Maya 3Dモデル】動画の真上（Y軸を上へずらした位置）に配置 -->
+                        <!-- Maya 3Dモデル（動画の真上に配置） -->
                         <a-gltf-model 
                             src="${currentConfig.model}" 
                             position="${currentConfig.modelPos}" 
@@ -248,9 +240,11 @@
             const stampMsg = document.getElementById('stamp-msg');
             const videoEl = document.getElementById('floor-video');
 
+            // 画面をタップしたタイミングで確実に音声を解禁＆再生を強行
             const unlockAudio = () => {
-                if (videoEl && !videoEl.paused) {
+                if (videoEl) {
                     videoEl.muted = false;
+                    videoEl.play().catch(e => console.log("再生強行エラー:", e));
                 }
                 window.removeEventListener('click', unlockAudio);
                 window.removeEventListener('touchstart', unlockAudio);
@@ -261,7 +255,8 @@
             if (targetObject) {
                 targetObject.addEventListener('targetFound', () => {
                     if (videoEl) {
-                        videoEl.play().catch(e => console.log("再生エラー:", e));
+                        videoEl.currentTime = 0;
+                        videoEl.play().catch(e => console.log("動画再生エラー:", e));
                     }
 
                     localStorage.setItem(`stamp-${currentConfig.floorText}-done`, '1');
