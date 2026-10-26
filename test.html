@@ -16,7 +16,7 @@
             padding: 0;
             width: 100vw;
             height: 100vh;
-            height: 100dvh; /* スマホのアドレスバー対策 */
+            height: 100dvh;
             overflow: hidden; 
             font-family: sans-serif; 
             background-color: #000000 !important; 
@@ -106,75 +106,6 @@
             display: none !important;
         }
 
-        /* 検出枠アニメーション */
-        .scan-overlay {
-            position: fixed;
-            top: 0; left: 0;
-            width: 100vw; height: 100vh;
-            z-index: 10000;
-            pointer-events: none;
-            opacity: 0;
-            transition: opacity 0.2s ease;
-        }
-
-        .scan-overlay.active { opacity: 1; }
-
-        .corner {
-            position: absolute;
-            width: 60px; height: 60px;
-            border-color: #10b981;
-            border-style: solid;
-            transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.27);
-        }
-
-        .corner-top-left {
-            top: 50%; left: 50%;
-            border-width: 6px 0 0 6px;
-            border-top-left-radius: 16px;
-            transform: translate(-50vw, -50vh);
-        }
-        
-        .corner-top-right {
-            top: 50%; left: 50%;
-            border-width: 6px 6px 0 0;
-            border-top-right-radius: 16px;
-            transform: translate(calc(50vw - 60px), -50vh);
-        }
-
-        .corner-bottom-left {
-            top: 50%; left: 50%;
-            border-width: 0 0 6px 6px;
-            border-bottom-left-radius: 16px;
-            transform: translate(-50vw, calc(50vh - 60px));
-        }
-
-        .corner-bottom-right {
-            top: 50%; left: 50%;
-            border-width: 0 6px 6px 0;
-            border-bottom-right-radius: 16px;
-            transform: translate(calc(50vw - 60px), calc(50vh - 60px));
-        }
-
-        .scan-overlay.active .corner-top-left { transform: translate(-120px, -120px); }
-        .scan-overlay.active .corner-top-right { transform: translate(60px, -120px); }
-        .scan-overlay.active .corner-bottom-left { transform: translate(-120px, 60px); }
-        .scan-overlay.active .corner-bottom-right { transform: translate(60px, 60px); }
-
-        .scan-message {
-            position: absolute;
-            top: 50%; left: 50%;
-            transform: translate(-50%, 140px);
-            background: rgba(16, 185, 129, 0.95);
-            color: #ffffff;
-            padding: 10px 20px;
-            border-radius: 20px;
-            font-weight: bold;
-            font-size: 16px;
-            white-space: nowrap;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-            border: 2px solid #ffffff;
-        }
-
         /* スタンプポップアップ */
         .stamp-dialog-overlay {
             position: fixed;
@@ -222,15 +153,6 @@
         <button id="btn-5f" class="floor-btn" onclick="switchFloor('5f')">5F</button>
     </div>
 
-    <!-- 検出アニメーションUI -->
-    <div id="scan-overlay" class="scan-overlay">
-        <div class="corner corner-top-left"></div>
-        <div class="corner corner-top-right"></div>
-        <div class="corner corner-bottom-left"></div>
-        <div class="corner corner-bottom-right"></div>
-        <div id="scan-text" class="scan-message">🔍 ターゲット検出中...</div>
-    </div>
-
     <!-- 動的に構築されるARシーンの挿入先 -->
     <div id="ar-container"></div>
 
@@ -249,12 +171,13 @@
     </div>
 
     <script>
+        // 階層別設定（kougyo2.glbはscale小さめ、GameVideo使用階はvideoWidth/videoHeightを拡大）
         const floorData = {
-            '1f': { model: 'kougyo2.glb', video: 'jgvideo2.mp4', floorText: '1F', scale: '2.5 2.5 2.5', pos: '-0.7 0 0.2' },
-            '2f': { model: 'syokutyou.glb', video: 'GameVideo.mp4', floorText: '2F', scale: '2.5 2.5 2.5', pos: '-0.7 0 0.2' },
-            '3f': { model: 'fukude3.glb', video: 'hukude.mp4', floorText: '3F', scale: '1.2 1.2 1.2', pos: '-0.4 0 0.2' },
-            '4f': { model: 'kougyo2.glb', video: 'GameVideo.mp4', floorText: '4F', scale: '2.5 2.5 2.5', pos: '-0.7 0 0.2' },
-            '5f': { model: 'syougyou3.glb', video: 'jgvideo2.mp4', floorText: '5F', scale: '1.2 1.2 1.2', pos: '-0.4 0 0.2' }
+            '1f': { model: 'kougyo2.glb', video: 'jgvideo2.mp4', floorText: '1F', scale: '0.4 0.4 0.4', pos: '-0.4 0 0.2', videoWidth: '0.8', videoHeight: '0.45' },
+            '2f': { model: 'syokutyou.glb', video: 'GameVideo.mp4', floorText: '2F', scale: '2.0 2.0 2.0', pos: '-0.7 0 0.2', videoWidth: '1.2', videoHeight: '0.68' },
+            '3f': { model: 'fukude3.glb', video: 'hukude.mp4', floorText: '3F', scale: '1.2 1.2 1.2', pos: '-0.4 0 0.2', videoWidth: '0.8', videoHeight: '0.45' },
+            '4f': { model: 'kougyo2.glb', video: 'GameVideo.mp4', floorText: '4F', scale: '0.4 0.4 0.4', pos: '-0.5 0 0.2', videoWidth: '1.2', videoHeight: '0.68' },
+            '5f': { model: 'syougyou3.glb', video: 'jgvideo2.mp4', floorText: '5F', scale: '1.2 1.2 1.2', pos: '-0.4 0 0.2', videoWidth: '0.8', videoHeight: '0.45' }
         };
 
         const urlParams = new URLSearchParams(window.location.search);
@@ -301,10 +224,10 @@
 
                         <a-video 
                             src="#floor-video" 
-                            position="0.35 0 0" 
+                            position="0.45 0 0" 
                             rotation="0 0 0" 
-                            width="0.7" 
-                            height="0.4" 
+                            width="${currentConfig.videoWidth}" 
+                            height="${currentConfig.videoHeight}" 
                             material="side: double;">
                         </a-video>
 
@@ -318,7 +241,6 @@
         }
 
         function setupTargetEvents() {
-            const scanOverlay = document.getElementById('scan-overlay');
             const targetObject = document.getElementById('target-object');
             const stampDialog = document.getElementById('stamp-dialog');
             const stampMsg = document.getElementById('stamp-msg');
@@ -336,9 +258,6 @@
 
             if (targetObject) {
                 targetObject.addEventListener('targetFound', () => {
-                    document.getElementById('scan-text').textContent = `🔍 ${currentConfig.floorText} ターゲット検出！`;
-                    scanOverlay.classList.add('active');
-
                     if (videoEl) {
                         videoEl.play().catch(e => console.log("再生エラー:", e));
                     }
@@ -352,8 +271,6 @@
                 });
 
                 targetObject.addEventListener('targetLost', () => {
-                    scanOverlay.classList.remove('active');
-                    
                     if (videoEl) {
                         videoEl.pause();
                     }
