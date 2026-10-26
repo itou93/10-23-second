@@ -10,7 +10,7 @@
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
 
     <style>
-        /* 1. 画面全体の白抜けを防止し背景を黒に固定 */
+        /* 画面全体の白抜けを防止し背景を黒に固定 */
         html, body { 
             margin: 0; 
             padding: 0;
@@ -22,7 +22,7 @@
             background-color: #000000 !important; 
         }
 
-        /* 2. ARコンテナおよびA-Frameシーンを画面全体に絶対配置 */
+        /* ARコンテナおよびA-Frameシーンを画面全体に絶対配置 */
         #ar-container, a-scene {
             position: fixed !important;
             top: 0 !important;
@@ -34,7 +34,7 @@
             overflow: hidden !important;
         }
 
-        /* 3. MindARが動的生成するCanvas・Videoの全画面フィット化 */
+        /* MindARが動的生成するCanvas・Videoの全画面フィット化 */
         .a-canvas {
             width: 100% !important;
             height: 100% !important;
@@ -134,7 +134,6 @@
             100% { transform: scale(1); opacity: 1; }
         }
 
-        /* 動画タグが画面上に露出するのを防ぐ設定 */
         a-assets video {
             display: none !important;
         }
@@ -171,13 +170,14 @@
     </div>
 
     <script>
-        // 階層別設定（kougyo2.glbはscale小さめ、GameVideo使用階はvideoWidth/videoHeightを拡大）
+        // 動画の位置を中央（0 0 0）に配置し、モデルの配置（modelPos）を動画の「真上（Y軸正の方向）」に移動
+        // 座標指定: 'X軸(左右) Y軸(上下) Z軸(手前奥)' 
         const floorData = {
-            '1f': { model: 'kougyo2.glb', video: 'jgvideo2.mp4', floorText: '1F', scale: '0.4 0.4 0.4', pos: '-0.4 0 0.2', videoWidth: '0.8', videoHeight: '0.45' },
-            '2f': { model: 'syokutyou.glb', video: 'GameVideo.mp4', floorText: '2F', scale: '2.0 2.0 2.0', pos: '-0.7 0 0.2', videoWidth: '1.2', videoHeight: '0.68' },
-            '3f': { model: 'fukude3.glb', video: 'hukude.mp4', floorText: '3F', scale: '1.2 1.2 1.2', pos: '-0.4 0 0.2', videoWidth: '0.8', videoHeight: '0.45' },
-            '4f': { model: 'kougyo2.glb', video: 'GameVideo.mp4', floorText: '4F', scale: '0.4 0.4 0.4', pos: '-0.5 0 0.2', videoWidth: '1.2', videoHeight: '0.68' },
-            '5f': { model: 'syougyou3.glb', video: 'jgvideo2.mp4', floorText: '5F', scale: '1.2 1.2 1.2', pos: '-0.4 0 0.2', videoWidth: '0.8', videoHeight: '0.45' }
+            '1f': { model: 'kougyo2.glb', video: 'jgvideo2.mp4', floorText: '1F', modelScale: '0.35 0.35 0.35', modelPos: '0 0.45 0.1', videoWidth: '0.8', videoHeight: '0.45' },
+            '2f': { model: 'syokutyou.glb', video: 'GameVideo.mp4', floorText: '2F', modelScale: '1.5 1.5 1.5', modelPos: '0 0.55 0.1', videoWidth: '1.0', videoHeight: '0.56' },
+            '3f': { model: 'fukude3.glb', video: 'hukude.mp4', floorText: '3F', modelScale: '1.0 1.0 1.0', modelPos: '0 0.45 0.1', videoWidth: '0.8', videoHeight: '0.45' },
+            '4f': { model: 'kougyo2.glb', video: 'GameVideo.mp4', floorText: '4F', modelScale: '0.35 0.35 0.35', modelPos: '0 0.55 0.1', videoWidth: '1.0', videoHeight: '0.56' },
+            '5f': { model: 'syougyou3.glb', video: 'jgvideo2.mp4', floorText: '5F', modelScale: '1.0 1.0 1.0', modelPos: '0 0.45 0.1', videoWidth: '0.8', videoHeight: '0.45' }
         };
 
         const urlParams = new URLSearchParams(window.location.search);
@@ -215,21 +215,23 @@
 
                     <a-entity mindar-image-target="targetIndex: 0" id="target-object">
                         
-                        <a-gltf-model 
-                            src="${currentConfig.model}" 
-                            position="${currentConfig.pos}" 
-                            scale="${currentConfig.scale}" 
-                            rotation="0 0 0">
-                        </a-gltf-model>
-
+                        <!-- 【動画】マーカーの中央（0 0 0）に配置 -->
                         <a-video 
                             src="#floor-video" 
-                            position="0.45 0 0" 
+                            position="0 0 0" 
                             rotation="0 0 0" 
                             width="${currentConfig.videoWidth}" 
                             height="${currentConfig.videoHeight}" 
                             material="side: double;">
                         </a-video>
+
+                        <!-- 【Maya 3Dモデル】動画の真上（Y軸を上へずらした位置）に配置 -->
+                        <a-gltf-model 
+                            src="${currentConfig.model}" 
+                            position="${currentConfig.modelPos}" 
+                            scale="${currentConfig.modelScale}" 
+                            rotation="0 0 0">
+                        </a-gltf-model>
 
                     </a-entity>
                 </a-scene>
