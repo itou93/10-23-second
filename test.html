@@ -198,133 +198,149 @@
         </div>
     </div>
 
-    <script>
-        const floorData = {
-            '1f': { model: 'kougyo2.glb', video: 'jgvideo2.mp4', floorText: '1F', modelScale: '0.35 0.35 0.35', modelPos: '0 0.45 0.1', videoWidth: '0.8', videoHeight: '0.45' },
-            '2f': { model: 'syokutyou.glb', video: 'GameVideo.mp4', floorText: '2F', modelScale: '3.5 3.5 3.5', modelPos: '0 0.7 0.15', videoWidth: '1.4', videoHeight: '0.8' },
-            '3f': { model: 'fukude3.glb', video: 'hukude2.mp4', floorText: '3F', modelScale: '2.0 2.0 2.0', modelPos: '0 0.55 0.15', videoWidth: '1.0', videoHeight: '0.56' },
-            '4f': { model: 'kougyo2.glb', video: 'GameVideo.mp4', floorText: '4F', modelScale: '0.35 0.35 0.35', modelPos: '0 0.55 0.1', videoWidth: '1.2', videoHeight: '0.68' },
-            '5f': { model: 'syougyou3.glb', video: 'jgvideo2.mp4', floorText: '5F', modelScale: '1.5 1.5 1.5', modelPos: '0 0.5 0.1', videoWidth: '0.9', videoHeight: '0.5' }
-        };
+   <script>
+    const floorData = {
+        '1f': { model: 'kougyo2.glb', video: 'jgvideo2.mp4', floorText: '1F', modelScale: '0.35 0.35 0.35', modelPos: '0 0.45 0.1', videoWidth: '0.8', videoHeight: '0.45' },
+        '2f': { model: 'syokutyou.glb', video: 'GameVideo.mp4', floorText: '2F', modelScale: '3.5 3.5 3.5', modelPos: '0 0.7 0.15', videoWidth: '1.4', videoHeight: '0.8' },
+        '3f': { model: 'fukude3.glb', video: 'hukude.mp4', floorText: '3F', modelScale: '2.0 2.0 2.0', modelPos: '0 0.55 0.15', videoWidth: '1.0', videoHeight: '0.56' },
+        '4f': { model: 'kougyo2.glb', video: 'GameVideo.mp4', floorText: '4F', modelScale: '0.35 0.35 0.35', modelPos: '0 0.55 0.1', videoWidth: '1.2', videoHeight: '0.68' },
+        '5f': { model: 'syougyou3.glb', video: 'jgvideo2.mp4', floorText: '5F', modelScale: '1.5 1.5 1.5', modelPos: '0 0.5 0.1', videoWidth: '0.9', videoHeight: '0.5' }
+    };
 
-        const urlParams = new URLSearchParams(window.location.search);
-        let selectedFloor = (urlParams.get('floor') || '1f').toLowerCase();
-        if (!floorData[selectedFloor]) selectedFloor = '1f';
+    const urlParams = new URLSearchParams(window.location.search);
+    let selectedFloor = (urlParams.get('floor') || '1f').toLowerCase();
+    if (!floorData[selectedFloor]) selectedFloor = '1f';
 
-        const currentConfig = floorData[selectedFloor];
+    let currentConfig = floorData[selectedFloor];
 
-        window.addEventListener('DOMContentLoaded', () => {
-            const activeBtn = document.getElementById(`btn-${selectedFloor}`);
-            if (activeBtn) activeBtn.classList.add('active');
-            
-            buildARScene();
-        });
+    window.addEventListener('DOMContentLoaded', () => {
+        updateActiveButton(selectedFloor);
+        buildARScene();
+    });
 
-        function buildARScene() {
-            const container = document.getElementById('ar-container');
-            container.innerHTML = `
-                <a-scene 
-                    id="ar-scene"
-                    mindar-image="imageTargetSrc: ./${selectedFloor}.mind; autoStart: true; uiLoading: no; uiError: no; filterMinCF: 0.0001; filterBeta: 0.001;" 
-                    color-space="sRGB" 
-                    renderer="colorManagement: true, physicallyCorrectLights: true" 
-                    vr-mode-ui="enabled: false"
-                    device-orientation-permission-ui="enabled: false">
-                  
-                    <a-assets>
-                        <video id="floor-video" src="${currentConfig.video}" autoplay loop muted playsinline webkit-playsinline preload="auto" crossorigin="anonymous"></video>
-                    </a-assets>
+    function updateActiveButton(floorPrefix) {
+        document.querySelectorAll('.floor-btn').forEach(btn => btn.classList.remove('active'));
+        const activeBtn = document.getElementById(`btn-${floorPrefix}`);
+        if (activeBtn) activeBtn.classList.add('active');
+    }
 
-                    <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+    function buildARScene() {
+        const container = document.getElementById('ar-container');
+        container.innerHTML = `
+            <a-scene 
+                id="ar-scene"
+                mindar-image="imageTargetSrc: ./${selectedFloor}.mind; autoStart: true; uiLoading: no; uiError: no; filterMinCF: 0.0001; filterBeta: 0.001;" 
+                color-space="sRGB" 
+                renderer="colorManagement: true, physicallyCorrectLights: true" 
+                vr-mode-ui="enabled: false"
+                device-orientation-permission-ui="enabled: false">
+              
+                <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-                    <a-entity light="type: ambient; color: #ffffff; intensity: 2.5;"></a-entity>
-                    <a-entity light="type: directional; color: #ffffff; intensity: 1.2;" position="1 2 1"></a-entity>
+                <a-entity light="type: ambient; color: #ffffff; intensity: 2.5;"></a-entity>
+                <a-entity light="type: directional; color: #ffffff; intensity: 1.2;" position="1 2 1"></a-entity>
 
-                    <a-entity mindar-image-target="targetIndex: 0" id="target-object">
-                        
-                        <a-video 
-                            src="#floor-video" 
-                            position="0 0 0" 
-                            rotation="0 0 0" 
-                            width="${currentConfig.videoWidth}" 
-                            height="${currentConfig.videoHeight}" 
-                            material="shader: flat; src: #floor-video; side: double;">
-                        </a-video>
+                <a-entity mindar-image-target="targetIndex: 0" id="target-object">
+                    
+                    <a-video 
+                        id="floor-video-entity"
+                        src="${currentConfig.video}" 
+                        position="0 0 0" 
+                        rotation="0 0 0" 
+                        width="${currentConfig.videoWidth}" 
+                        height="${currentConfig.videoHeight}" 
+                        material="shader: flat; side: double;"
+                        autoplay
+                        loop
+                        muted
+                        playsinline
+                        webkit-playsinline>
+                    </a-video>
 
-                        <a-gltf-model 
-                            src="${currentConfig.model}" 
-                            position="${currentConfig.modelPos}" 
-                            scale="${currentConfig.modelScale}" 
-                            rotation="0 0 0">
-                        </a-gltf-model>
+                    <a-gltf-model 
+                        src="${currentConfig.model}" 
+                        position="${currentConfig.modelPos}" 
+                        scale="${currentConfig.modelScale}" 
+                        rotation="0 0 0">
+                    </a-gltf-model>
 
-                    </a-entity>
-                </a-scene>
-            `;
+                </a-entity>
+            </a-scene>
+        `;
 
-            setTimeout(() => {
-                setupTargetEvents();
-            }, 300);
-        }
+        setTimeout(() => {
+            setupTargetEvents();
+        }, 300);
+    }
 
-        function setupTargetEvents() {
-            const scanOverlay = document.getElementById('scan-overlay');
-            const targetObject = document.getElementById('target-object');
-            const stampDialog = document.getElementById('stamp-dialog');
-            const stampMsg = document.getElementById('stamp-msg');
-            const videoEl = document.getElementById('floor-video');
+    // 階層切り替え時にページリロード（window.location.href）を行わず、ARシーンを安全に再構築する
+    function switchFloor(floorPrefix) {
+        if (floorPrefix === selectedFloor) return;
 
-            const unlockAudio = () => {
-                if (videoEl) {
-                    videoEl.muted = false;
-                    videoEl.play().catch(e => console.log("再生強行エラー:", e));
-                }
-                window.removeEventListener('click', unlockAudio);
-                window.removeEventListener('touchstart', unlockAudio);
-            };
-            window.addEventListener('click', unlockAudio);
-            window.addEventListener('touchstart', unlockAudio);
+        selectedFloor = floorPrefix;
+        currentConfig = floorData[selectedFloor];
+        updateActiveButton(selectedFloor);
 
-            if (targetObject) {
-                targetObject.addEventListener('targetFound', () => {
-                    document.getElementById('scan-text').textContent = `🎉 ${currentConfig.floorText} ターゲット検出！`;
-                    scanOverlay.classList.add('active');
-
-                    if (videoEl) {
-                        videoEl.currentTime = 0;
-                        videoEl.play().catch(e => console.log("動画再生エラー:", e));
-                    }
-
-                    localStorage.setItem(`stamp-${currentConfig.floorText}-done`, '1');
-
-                    setTimeout(() => {
-                        stampMsg.innerHTML = `${currentConfig.floorText} のオブジェクトを検出して<br>キャラクターが出現しました！<br>マップを開いて確認しますか？`;
-                        stampDialog.style.display = 'flex';
-                    }, 10000);
-                });
-
-                targetObject.addEventListener('targetLost', () => {
-                    scanOverlay.classList.remove('active');
-                    if (videoEl) {
-                        videoEl.pause();
-                    }
-                });
+        const sceneEl = document.getElementById('ar-scene');
+        
+        // 既存のMindARシステムを一時停止して破棄
+        if (sceneEl && sceneEl.systems && sceneEl.systems['mindar-image-system']) {
+            try {
+                sceneEl.systems['mindar-image-system'].stop();
+            } catch (e) {
+                console.log("MindAR stop error:", e);
             }
         }
 
-        function switchFloor(floorPrefix) {
-            if (floorPrefix === selectedFloor) return;
-            const currentPath = window.location.pathname;
-            window.location.href = `${currentPath}?floor=${floorPrefix}`;
-        }
+        // ARコンテナ内を一度消去し、100ms後に新しい階のシーンを再構築
+        const container = document.getElementById('ar-container');
+        container.innerHTML = '';
 
-        function closeStampDialog() {
-            document.getElementById('stamp-dialog').style.display = 'none';
-        }
+        setTimeout(() => {
+            buildARScene();
+        }, 100);
+    }
 
-        function goToMap() {
-            window.location.href = 'map.html';
+    function setupTargetEvents() {
+        const scanOverlay = document.getElementById('scan-overlay');
+        const targetObject = document.getElementById('target-object');
+        const stampDialog = document.getElementById('stamp-dialog');
+        const stampMsg = document.getElementById('stamp-msg');
+        const videoEl = document.querySelector('a-video');
+
+        const unlockAudio = () => {
+            window.removeEventListener('click', unlockAudio);
+            window.removeEventListener('touchstart', unlockAudio);
+        };
+        window.addEventListener('click', unlockAudio);
+        window.addEventListener('touchstart', unlockAudio);
+
+        if (targetObject) {
+            targetObject.addEventListener('targetFound', () => {
+                document.getElementById('scan-text').textContent = `🎉 ${currentConfig.floorText} ターゲット検出！`;
+                scanOverlay.classList.add('active');
+
+                localStorage.setItem(`stamp-${currentConfig.floorText}-done`, '1');
+
+                setTimeout(() => {
+                    stampMsg.innerHTML = `${currentConfig.floorText} のオブジェクトを検出して<br>キャラクターが出現しました！<br>マップを開いて確認しますか？`;
+                    stampDialog.style.display = 'flex';
+                }, 10000);
+            });
+
+            targetObject.addEventListener('targetLost', () => {
+                scanOverlay.classList.remove('active');
+            });
         }
-    </script>
+    }
+
+    function closeStampDialog() {
+        document.getElementById('stamp-dialog').style.display = 'none';
+    }
+
+    function goToMap() {
+        window.location.href = 'map.html';
+    }
+</script>
 </body>
 </html>
