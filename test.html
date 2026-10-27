@@ -10,6 +10,7 @@
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
 
     <style>
+        /* 画面全体の白抜け防止 */
         html, body { 
             margin: 0; 
             padding: 0;
@@ -53,6 +54,7 @@
             object-fit: cover !important;
         }
         
+        /* 戻るボタン */
         .btn-back {
             position: fixed;
             top: 20px;
@@ -68,6 +70,7 @@
             border: 2px solid #ffffff;
         }
 
+        /* 階層切り替えUI */
         .floor-selector {
             position: fixed;
             top: 20px;
@@ -101,6 +104,7 @@
             display: none !important;
         }
 
+        /* ログメッセージオーバーレイ（枠線部分は非表示） */
         .scan-overlay {
             position: fixed;
             top: 0; left: 0;
@@ -115,7 +119,7 @@
 
         .scan-message {
             position: absolute;
-            top: 15%;
+            top: 15%; /* 画面上部にログを表示 */
             left: 50%;
             transform: translateX(-50%);
             background: rgba(16, 185, 129, 0.95);
@@ -129,6 +133,7 @@
             border: 2px solid #ffffff;
         }
 
+        /* スタンプポップアップ */
         .stamp-dialog-overlay {
             position: fixed;
             top: 0; left: 0;
@@ -173,6 +178,7 @@
         <button id="btn-5f" class="floor-btn" onclick="switchFloor('5f')">5F</button>
     </div>
 
+    <!-- 検出ログ表示用UI（四角い枠線をカット） -->
     <div id="scan-overlay" class="scan-overlay">
         <div id="scan-text" class="scan-message">🔍 ターゲット検出中...</div>
     </div>
@@ -193,11 +199,10 @@
     </div>
 
     <script>
-        // 3Fの動画を動作確認用の 'jgvideo2.mp4' に一時変更
         const floorData = {
             '1f': { model: 'kougyo2.glb', video: 'jgvideo2.mp4', floorText: '1F', modelScale: '0.35 0.35 0.35', modelPos: '0 0.45 0.1', videoWidth: '0.8', videoHeight: '0.45' },
             '2f': { model: 'syokutyou.glb', video: 'GameVideo.mp4', floorText: '2F', modelScale: '3.5 3.5 3.5', modelPos: '0 0.7 0.15', videoWidth: '1.4', videoHeight: '0.8' },
-            '3f': { model: 'fukude3.glb', video: 'jgvideo2.mp4', floorText: '3F', modelScale: '2.0 2.0 2.0', modelPos: '0 0.55 0.15', videoWidth: '1.0', videoHeight: '0.56' },
+            '3f': { model: 'fukude3.glb', video: 'hukude2.mp4', floorText: '3F', modelScale: '2.0 2.0 2.0', modelPos: '0 0.55 0.15', videoWidth: '1.0', videoHeight: '0.56' },
             '4f': { model: 'kougyo2.glb', video: 'GameVideo.mp4', floorText: '4F', modelScale: '0.35 0.35 0.35', modelPos: '0 0.55 0.1', videoWidth: '1.2', videoHeight: '0.68' },
             '5f': { model: 'syougyou3.glb', video: 'jgvideo2.mp4', floorText: '5F', modelScale: '1.5 1.5 1.5', modelPos: '0 0.5 0.1', videoWidth: '0.9', videoHeight: '0.5' }
         };
@@ -226,6 +231,10 @@
                     vr-mode-ui="enabled: false"
                     device-orientation-permission-ui="enabled: false">
                   
+                    <a-assets>
+                        <video id="floor-video" src="${currentConfig.video}" autoplay loop muted playsinline webkit-playsinline preload="auto" crossorigin="anonymous"></video>
+                    </a-assets>
+
                     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
                     <a-entity light="type: ambient; color: #ffffff; intensity: 2.5;"></a-entity>
@@ -233,20 +242,13 @@
 
                     <a-entity mindar-image-target="targetIndex: 0" id="target-object">
                         
-                        <!-- a-assetsを使わずに直接指定してロード待ち停止を回避 -->
                         <a-video 
-                            id="floor-video-entity"
-                            src="${currentConfig.video}" 
+                            src="#floor-video" 
                             position="0 0 0" 
                             rotation="0 0 0" 
                             width="${currentConfig.videoWidth}" 
                             height="${currentConfig.videoHeight}" 
-                            material="shader: flat; side: double;"
-                            autoplay
-                            loop
-                            muted
-                            playsinline
-                            webkit-playsinline>
+                            material="shader: flat; src: #floor-video; side: double;">
                         </a-video>
 
                         <a-gltf-model 
@@ -270,11 +272,12 @@
             const targetObject = document.getElementById('target-object');
             const stampDialog = document.getElementById('stamp-dialog');
             const stampMsg = document.getElementById('stamp-msg');
-            const videoEl = document.querySelector('a-video');
+            const videoEl = document.getElementById('floor-video');
 
             const unlockAudio = () => {
-                if (videoEl && videoEl.components && videoEl.components.material) {
-                    // タップ時に音声解禁
+                if (videoEl) {
+                    videoEl.muted = false;
+                    videoEl.play().catch(e => console.log("再生強行エラー:", e));
                 }
                 window.removeEventListener('click', unlockAudio);
                 window.removeEventListener('touchstart', unlockAudio);
@@ -287,6 +290,11 @@
                     document.getElementById('scan-text').textContent = `🎉 ${currentConfig.floorText} ターゲット検出！`;
                     scanOverlay.classList.add('active');
 
+                    if (videoEl) {
+                        videoEl.currentTime = 0;
+                        videoEl.play().catch(e => console.log("動画再生エラー:", e));
+                    }
+
                     localStorage.setItem(`stamp-${currentConfig.floorText}-done`, '1');
 
                     setTimeout(() => {
@@ -297,6 +305,9 @@
 
                 targetObject.addEventListener('targetLost', () => {
                     scanOverlay.classList.remove('active');
+                    if (videoEl) {
+                        videoEl.pause();
+                    }
                 });
             }
         }
