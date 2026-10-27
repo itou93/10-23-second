@@ -10,18 +10,19 @@
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
 
     <style>
-        /* 画面全体の白抜け防止 */
+        /* 1. 画面全体の白抜けを防止し背景を黒に固定 */
         html, body { 
             margin: 0; 
             padding: 0;
             width: 100vw;
             height: 100vh;
-            height: 100dvh;
+            height: 100dvh; /* スマホのアドレスバー対策 */
             overflow: hidden; 
             font-family: sans-serif; 
             background-color: #000000 !important; 
         }
 
+        /* 2. ARコンテナおよびA-Frameシーンを画面全体に絶対配置 */
         #ar-container, a-scene {
             position: fixed !important;
             top: 0 !important;
@@ -33,6 +34,7 @@
             overflow: hidden !important;
         }
 
+        /* 3. MindARが動的生成するCanvas・Videoの全画面フィット化 */
         .a-canvas {
             width: 100% !important;
             height: 100% !important;
@@ -54,6 +56,7 @@
             object-fit: cover !important;
         }
         
+        /* 戻るボタン */
         .btn-back {
             position: fixed;
             top: 20px;
@@ -69,6 +72,7 @@
             border: 2px solid #ffffff;
         }
 
+        /* 階層切り替えUI */
         .floor-selector {
             position: fixed;
             top: 20px;
@@ -102,6 +106,76 @@
             display: none !important;
         }
 
+        /* 検出枠アニメーション */
+        .scan-overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100vw; height: 100vh;
+            z-index: 10000;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .scan-overlay.active { opacity: 1; }
+
+        .corner {
+            position: absolute;
+            width: 60px; height: 60px;
+            border-color: #10b981;
+            border-style: solid;
+            transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.27);
+        }
+
+        .corner-top-left {
+            top: 50%; left: 50%;
+            border-width: 6px 0 0 6px;
+            border-top-left-radius: 16px;
+            transform: translate(-50vw, -50vh);
+        }
+        
+        .corner-top-right {
+            top: 50%; left: 50%;
+            border-width: 6px 6px 0 0;
+            border-top-right-radius: 16px;
+            transform: translate(calc(50vw - 60px), -50vh);
+        }
+
+        .corner-bottom-left {
+            top: 50%; left: 50%;
+            border-width: 0 0 6px 6px;
+            border-bottom-left-radius: 16px;
+            transform: translate(-50vw, calc(50vh - 60px));
+        }
+
+        .corner-bottom-right {
+            top: 50%; left: 50%;
+            border-width: 0 6px 6px 0;
+            border-bottom-right-radius: 16px;
+            transform: translate(calc(50vw - 60px), calc(50vh - 60px));
+        }
+
+        .scan-overlay.active .corner-top-left { transform: translate(-120px, -120px); }
+        .scan-overlay.active .corner-top-right { transform: translate(60px, -120px); }
+        .scan-overlay.active .corner-bottom-left { transform: translate(-120px, 60px); }
+        .scan-overlay.active .corner-bottom-right { transform: translate(60px, 60px); }
+
+        .scan-message {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, 140px);
+            background: rgba(16, 185, 129, 0.95);
+            color: #ffffff;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 16px;
+            white-space: nowrap;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            border: 2px solid #ffffff;
+        }
+
+        /* スタンプポップアップ */
         .stamp-dialog-overlay {
             position: fixed;
             top: 0; left: 0;
@@ -129,6 +203,7 @@
             100% { transform: scale(1); opacity: 1; }
         }
 
+        /* 動画タグが画面上に露出するのを防ぐ設定 */
         a-assets video {
             display: none !important;
         }
@@ -138,6 +213,7 @@
 
     <a href="videoMaya.html" class="btn-back">← 戻る</a>
 
+    <!-- 階層切り替えUI -->
     <div class="floor-selector">
         <button id="btn-1f" class="floor-btn" onclick="switchFloor('1f')">1F</button>
         <button id="btn-2f" class="floor-btn" onclick="switchFloor('2f')">2F</button>
@@ -146,8 +222,19 @@
         <button id="btn-5f" class="floor-btn" onclick="switchFloor('5f')">5F</button>
     </div>
 
+    <!-- 検出アニメーションUI -->
+    <div id="scan-overlay" class="scan-overlay">
+        <div class="corner corner-top-left"></div>
+        <div class="corner corner-top-right"></div>
+        <div class="corner corner-bottom-left"></div>
+        <div class="corner corner-bottom-right"></div>
+        <div id="scan-text" class="scan-message">🔍 ターゲット検出中...</div>
+    </div>
+
+    <!-- 動的に構築されるARシーンの挿入先 -->
     <div id="ar-container"></div>
 
+    <!-- スタンプ獲得ポップアップ -->
     <div id="stamp-dialog" class="stamp-dialog-overlay">
         <div class="stamp-dialog-box">
             <h3 style="margin-top: 0; color: #059669; font-size: 20px;">🎉 スタンプ獲得！</h3>
@@ -162,13 +249,12 @@
     </div>
 
     <script>
-        // 2F(syokutyo)モデル・動画サイズを特大指定、3F(fukude3)の描画座標(modelPos)とスケール(modelScale)を最適化
         const floorData = {
-            '1f': { model: 'kougyo2.glb', video: 'jgvideo2.mp4', floorText: '1F', modelScale: '0.35 0.35 0.35', modelPos: '0 0.45 0.1', videoWidth: '0.8', videoHeight: '0.45' },
-            '2f': { model: 'syokutyou.glb', video: 'GameVideo.mp4', floorText: '2F', modelScale: '3.5 3.5 3.5', modelPos: '0 0.7 0.15', videoWidth: '1.4', videoHeight: '0.8' },
-            '3f': { model: 'fukude3.glb', video: 'hukude.mp4', floorText: '3F', modelScale: '2.0 2.0 2.0', modelPos: '0 0.55 0.15', videoWidth: '1.0', videoHeight: '0.56' },
-            '4f': { model: 'kougyo2.glb', video: 'GameVideo.mp4', floorText: '4F', modelScale: '0.35 0.35 0.35', modelPos: '0 0.55 0.1', videoWidth: '1.2', videoHeight: '0.68' },
-            '5f': { model: 'syougyou3.glb', video: 'jgvideo2.mp4', floorText: '5F', modelScale: '1.5 1.5 1.5', modelPos: '0 0.5 0.1', videoWidth: '0.9', videoHeight: '0.5' }
+            '1f': { model: 'kougyo2.glb', video: 'jgvideo2.mp4', floorText: '1F', scale: '2.5 2.5 2.5', pos: '-0.7 0 0.2' },
+            '2f': { model: 'syokutyou.glb', video: 'GameVideo.mp4', floorText: '2F', scale: '2.5 2.5 2.5', pos: '-0.7 0 0.2' },
+            '3f': { model: 'fukude3.glb', video: 'hukude.mov', floorText: '3F', scale: '1.2 1.2 1.2', pos: '-0.4 0 0.2' },
+            '4f': { model: 'kougyo2.glb', video: 'GameVideo.mp4', floorText: '4F', scale: '2.0 2.0 2.0', pos: '-0.7 0 0.2' },
+            '5f': { model: 'syougyou3.glb', video: 'jgvideo2.mp4', floorText: '5F', scale: '1.2 1.2 1.2', pos: '-0.4 0 0.2' }
         };
 
         const urlParams = new URLSearchParams(window.location.search);
@@ -196,8 +282,7 @@
                     device-orientation-permission-ui="enabled: false">
                   
                     <a-assets>
-                        <!-- autoplay/playsinline/webkit-playsinline を完全付与して再生トラブル防止 -->
-                        <video id="floor-video" src="${currentConfig.video}" autoplay loop muted playsinline webkit-playsinline preload="auto" crossorigin="anonymous"></video>
+                        <video id="floor-video" src="${currentConfig.video}" loop muted playsinline webkit-playsinline preload="metadata" crossorigin="anonymous"></video>
                     </a-assets>
 
                     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
@@ -207,23 +292,21 @@
 
                     <a-entity mindar-image-target="targetIndex: 0" id="target-object">
                         
-                        <!-- 動画（画面中央） -->
-                        <a-video 
-                            src="#floor-video" 
-                            position="0 0 0" 
-                            rotation="0 0 0" 
-                            width="${currentConfig.videoWidth}" 
-                            height="${currentConfig.videoHeight}" 
-                            material="side: double; shader: flat;">
-                        </a-video>
-
-                        <!-- Maya 3Dモデル（動画の真上に配置） -->
                         <a-gltf-model 
                             src="${currentConfig.model}" 
-                            position="${currentConfig.modelPos}" 
-                            scale="${currentConfig.modelScale}" 
+                            position="${currentConfig.pos}" 
+                            scale="${currentConfig.scale}" 
                             rotation="0 0 0">
                         </a-gltf-model>
+
+                        <a-video 
+                            src="#floor-video" 
+                            position="0.35 0 0" 
+                            rotation="0 0 0" 
+                            width="0.7" 
+                            height="0.4" 
+                            material="side: double;">
+                        </a-video>
 
                     </a-entity>
                 </a-scene>
@@ -235,16 +318,15 @@
         }
 
         function setupTargetEvents() {
+            const scanOverlay = document.getElementById('scan-overlay');
             const targetObject = document.getElementById('target-object');
             const stampDialog = document.getElementById('stamp-dialog');
             const stampMsg = document.getElementById('stamp-msg');
             const videoEl = document.getElementById('floor-video');
 
-            // 画面をタップしたタイミングで確実に音声を解禁＆再生を強行
             const unlockAudio = () => {
-                if (videoEl) {
+                if (videoEl && !videoEl.paused) {
                     videoEl.muted = false;
-                    videoEl.play().catch(e => console.log("再生強行エラー:", e));
                 }
                 window.removeEventListener('click', unlockAudio);
                 window.removeEventListener('touchstart', unlockAudio);
@@ -254,9 +336,11 @@
 
             if (targetObject) {
                 targetObject.addEventListener('targetFound', () => {
+                    document.getElementById('scan-text').textContent = `🔍 ${currentConfig.floorText} ターゲット検出！`;
+                    scanOverlay.classList.add('active');
+
                     if (videoEl) {
-                        videoEl.currentTime = 0;
-                        videoEl.play().catch(e => console.log("動画再生エラー:", e));
+                        videoEl.play().catch(e => console.log("再生エラー:", e));
                     }
 
                     localStorage.setItem(`stamp-${currentConfig.floorText}-done`, '1');
@@ -268,6 +352,8 @@
                 });
 
                 targetObject.addEventListener('targetLost', () => {
+                    scanOverlay.classList.remove('active');
+                    
                     if (videoEl) {
                         videoEl.pause();
                     }
