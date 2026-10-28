@@ -225,11 +225,14 @@
     }
 
     function buildARScene() {
+        // 4Fの時だけ 4fsecond.mind を使い、それ以外は 1f.mind, 2f.mind... を使う
+        const mindFile = selectedFloor === '4f' ? '4fsecond' : selectedFloor;
+
         const container = document.getElementById('ar-container');
         container.innerHTML = `
             <a-scene 
                 id="ar-scene"
-                mindar-image="imageTargetSrc: ./${selectedFloor}.mind; autoStart: true; uiLoading: no; uiError: no; filterMinCF: 0.0001; filterBeta: 0.001;" 
+                mindar-image="imageTargetSrc: ./${mindFile}.mind; autoStart: true; uiLoading: no; uiError: no; filterMinCF: 0.0001; filterBeta: 0.001;" 
                 color-space="sRGB" 
                 renderer="colorManagement: true, physicallyCorrectLights: true" 
                 vr-mode-ui="enabled: false"
