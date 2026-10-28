@@ -299,14 +299,15 @@
         }, 100);
     }
 
+   // タイマーを保持する変数を関数外（または全体）で宣言
+    let stampTimer = null;
+
     function setupTargetEvents() {
-        const scanOverlay = document.getElementById('scan-overlay');
         const targetObject = document.getElementById('target-object');
         const stampDialog = document.getElementById('stamp-dialog');
         const stampMsg = document.getElementById('stamp-msg');
-        
-        // 読み込み直後に動画が再生されないよう、明示的に pause しておく
         const videoEntity = document.getElementById('floor-video-entity');
+
         if (videoEntity) {
             videoEntity.addEventListener('loaded', () => {
                 const videoEl = videoEntity.components.material?.material?.map?.image;
@@ -318,12 +319,11 @@
         }
 
         if (targetObject) {
-            // ターゲット（マーカー）を実際にカメラで検出したときだけ再生
+            // マーカー検出時
             targetObject.addEventListener('targetFound', () => {
-                document.getElementById('scan-text').textContent = `🎉 ${currentConfig.floorText} ターゲット検出！`;
-                scanOverlay.classList.add('active');
+                // すでにタイマーが動いていたら念のためクリア
+                if (stampTimer) clearTimeout(stampTimer);
 
-                // マーカーが見つかった瞬間に動画再生
                 if (videoEntity && videoEntity.components.material && videoEntity.components.material.material.map) {
                     const videoEl = videoEntity.components.material.material.map.image;
                     if (videoEl && typeof videoEl.play === 'function') {
@@ -333,15 +333,20 @@
 
                 localStorage.setItem(`stamp-${currentConfig.floorText}-done`, '1');
 
-                setTimeout(() => {
+                // タイマーをセットして変数に保存（例：10秒後）
+                stampTimer = setTimeout(() => {
                     stampMsg.innerHTML = `${currentConfig.floorText} のオブジェクトを検出して<br>キャラクターが出現しました！<br>マップを開いて確認しますか？`;
                     stampDialog.style.display = 'flex';
                 }, 10000);
             });
 
-            // マーカーを見失ったら即座に停止
+            // マーカーを見失った時
             targetObject.addEventListener('targetLost', () => {
-                scanOverlay.classList.remove('active');
+                // 【追加】見失ったらタイマーを即座にキャンセル（リセット）
+                if (stampTimer) {
+                    clearTimeout(stampTimer);
+                    stampTimer = null;
+                }
 
                 if (videoEntity && videoEntity.components.material && videoEntity.components.material.material.map) {
                     const videoEl = videoEntity.components.material.material.map.image;
