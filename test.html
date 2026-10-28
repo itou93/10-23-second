@@ -225,49 +225,48 @@
     }
 
     function buildARScene() {
-        const mindFile = selectedFloor === '4f' ? '4fsecond' : selectedFloor;
+        // 4階なら4f2、5階なら5f2、それ以外（1f〜3f）は選択された階数をそのままセット
+        const mindFile = selectedFloor === '4f' ? '4f2' : (selectedFloor === '5f' ? '5f2' : selectedFloor);
         const container = document.getElementById('ar-container');
         
         // autoplay を完全削除し、最初から動画を完全に停止状態にする
         container.innerHTML = `
-            <a-scene 
-                id="ar-scene"
-                mindar-image="imageTargetSrc: ./${mindFile}.mind; autoStart: true; uiLoading: no; uiError: no; filterMinCF: 0.0001; filterBeta: 0.001;" 
-                color-space="sRGB" 
-                renderer="colorManagement: true, physicallyCorrectLights: true" 
-                vr-mode-ui="enabled: false"
-                device-orientation-permission-ui="enabled: false">
-              
-                <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+        <a-scene
+            id="ar-scene"
+            mindar-image="imageTargetSrc: ./${mindFile}.mind; autoStart: true; uiLoading: no; uiError: no; filterMinCF: 0.0001; filterBeta: 0.001;"
+            color-space="sRGB"
+            renderer="colorManagement: true, physicallyCorrectLights: true"
+            vr-mode-ui="enabled: false"
+            device-orientation-permission-ui="enabled: false">
 
-                <a-entity light="type: ambient; color: #ffffff; intensity: 2.5;"></a-entity>
-                <a-entity light="type: directional; color: #ffffff; intensity: 1.2;" position="1 2 1"></a-entity>
+            <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-                <a-entity mindar-image-target="targetIndex: 0" id="target-object">
-                    
-                <a-video 
-                    id="floor-video-entity"
-                    src="${currentConfig.video}" 
-                    position="0 0 0" 
-                    rotation="0 0 0" 
-                    width="${currentConfig.videoWidth}" 
-                    height="${currentConfig.videoHeight}" 
-                    material="shader: flat; side: double;"
-                    muted
-                    playsinline
-                    webkit-playsinline>
-                </a-video>
+            <a-entity light="type: ambient; color: #ffffff; intensity: 2.5;"></a-entity>
+            <a-entity light="type: directional; color: #ffffff; intensity: 1.2;" position="1 2 1"></a-entity>
 
-                    <a-gltf-model 
-                        src="${currentConfig.model}" 
-                        position="${currentConfig.modelPos}" 
-                        scale="${currentConfig.modelScale}" 
-                        rotation="0 0 0">
-                    </a-gltf-model>
+            <a-entity mindar-image-target="targetIndex: 0" id="target-object">
+                <a-video
+                id="floor-video-entity"
+                src="${currentConfig.video}"
+                position="0 0 0"
+                rotation="0 0 0"
+                width="${currentConfig.videoWidth}"
+                height="${currentConfig.videoHeight}"
+                material="shader: flat; side: double;"
+                muted
+                playsinline
+                webkit-playsinline>
+            </a-video>
 
-                </a-entity>
-            </a-scene>
-        `;
+            <a-gltf-model
+                src="${currentConfig.model}"
+                position="${currentConfig.modelPos}"
+                scale="${currentConfig.modelScale}"
+                rotation="0 0 0">
+            </a-gltf-model>
+            </a-entity>
+        </a-scene>
+  `;
 
         setTimeout(() => {
             setupTargetEvents();
