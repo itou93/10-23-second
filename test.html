@@ -245,20 +245,20 @@
 
                 <a-entity mindar-image-target="targetIndex: 0" id="target-object">
                     
-                    <a-video 
-                        id="floor-video-entity"
-                        src="${currentConfig.video}" 
-                        position="0 0 0" 
-                        rotation="0 0 0" 
-                        width="${currentConfig.videoWidth}" 
-                        height="${currentConfig.videoHeight}" 
-                        material="shader: flat; side: double;"
-                        autoplay
-                        loop
-                        muted
-                        playsinline
-                        webkit-playsinline>
-                    </a-video>
+                    // 修正後（autoplay を消す）
+                <a-video 
+                    id="floor-video-entity"
+                    src="${currentConfig.video}" 
+                    position="0 0 0" 
+                    rotation="0 0 0" 
+                    width="${currentConfig.videoWidth}" 
+                    height="${currentConfig.videoHeight}" 
+                    material="shader: flat; side: double;"
+                    loop
+                    muted
+                    playsinline
+                    webkit-playsinline>
+                </a-video>
 
                     <a-gltf-model 
                         src="${currentConfig.model}" 
@@ -305,37 +305,50 @@
     }
 
     function setupTargetEvents() {
-        const scanOverlay = document.getElementById('scan-overlay');
-        const targetObject = document.getElementById('target-object');
-        const stampDialog = document.getElementById('stamp-dialog');
-        const stampMsg = document.getElementById('stamp-msg');
-        const videoEl = document.querySelector('a-video');
+    const scanOverlay = document.getElementById('scan-overlay');
+    const targetObject = document.getElementById('target-object');
+    const stampDialog = document.getElementById('stamp-dialog');
+    const stampMsg = document.getElementById('stamp-msg');
+    
+    // a-video要素と、その内部のDOM動画要素を取得
+    const videoEntity = document.getElementById('floor-video-entity');
 
-        const unlockAudio = () => {
-            window.removeEventListener('click', unlockAudio);
-            window.removeEventListener('touchstart', unlockAudio);
-        };
-        window.addEventListener('click', unlockAudio);
-        window.addEventListener('touchstart', unlockAudio);
+    if (targetObject) {
+        // ターゲット発見時：動画再生 ＋ ログ表示
+        targetObject.addEventListener('targetFound', () => {
+            document.getElementById('scan-text').textContent = `🎉 ${currentConfig.floorText} ターゲット検出！`;
+            scanOverlay.classList.add('active');
 
-        if (targetObject) {
-            targetObject.addEventListener('targetFound', () => {
-                document.getElementById('scan-text').textContent = `🎉 ${currentConfig.floorText} ターゲット検出！`;
-                scanOverlay.classList.add('active');
+            // マーカー検出時に動画を再生
+            if (videoEntity && videoEntity.components.material && videoEntity.components.material.material.map) {
+                const videoEl = videoEntity.components.material.material.map.image;
+                if (videoEl && typeof videoEl.play === 'function') {
+                    videoEl.play().catch(e => console.log("Video play error:", e));
+                }
+            }
 
-                localStorage.setItem(`stamp-${currentConfig.floorText}-done`, '1');
+            localStorage.setItem(`stamp-${currentConfig.floorText}-done`, '1');
 
-                setTimeout(() => {
-                    stampMsg.innerHTML = `${currentConfig.floorText} のオブジェクトを検出して<br>キャラクターが出現しました！<br>マップを開いて確認しますか？`;
-                    stampDialog.style.display = 'flex';
-                }, 10000);
-            });
+            setTimeout(() => {
+                stampMsg.innerHTML = `${currentConfig.floorText} のオブジェクトを検出して<br>キャラクターが出現しました！<br>マップを開いて確認しますか？`;
+                stampDialog.style.display = 'flex';
+            }, 10000);
+        });
 
-            targetObject.addEventListener('targetLost', () => {
-                scanOverlay.classList.remove('active');
-            });
-        }
+        // ターゲット見失い時：動画一時停止
+        targetObject.addEventListener('targetLost', () => {
+            scanOverlay.classList.remove('active');
+
+            // マーカーを見失ったら動画を一時停止
+            if (videoEntity && videoEntity.components.material && videoEntity.components.material.material.map) {
+                const videoEl = videoEntity.components.material.material.map.image;
+                if (videoEl && typeof videoEl.pause === 'function') {
+                    videoEl.pause();
+                }
+            }
+        });
     }
+}
 
     function closeStampDialog() {
         document.getElementById('stamp-dialog').style.display = 'none';
