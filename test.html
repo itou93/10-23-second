@@ -245,17 +245,18 @@
 
                 <a-entity mindar-image-target="targetIndex: 0" id="target-object">
                     
-                    <a-video 
-                        id="floor-video-entity"
-                        src="${currentConfig.video}" 
-                        position="0 0 0" 
-                        rotation="0 0 0" 
-                        width="${currentConfig.videoWidth}" 
-                        height="${currentConfig.videoHeight}" 
-                        material="shader: flat; side: double;"
-                        playsinline
-                        webkit-playsinline>
-                    </a-video>
+                <a-video 
+                    id="floor-video-entity"
+                    src="${currentConfig.video}" 
+                    position="0 0 0" 
+                    rotation="0 0 0" 
+                    width="${currentConfig.videoWidth}" 
+                    height="${currentConfig.videoHeight}" 
+                    material="shader: flat; side: double;"
+                    muted
+                    playsinline
+                    webkit-playsinline>
+                </a-video>
 
                     <a-gltf-model 
                         src="${currentConfig.model}" 
