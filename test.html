@@ -276,13 +276,7 @@
     function switchFloor(floorPrefix) {
         if (floorPrefix === selectedFloor) return;
 
-        // 切替時に強制的にすべての動画要素を停止＆クリア
-        document.querySelectorAll('video').forEach(v => {
-            try {
-                v.pause();
-                v.currentTime = 0;
-            } catch(e) {}
-        });
+        window.location.href = `?floor=${floorPrefix}`;
 
         selectedFloor = floorPrefix;
         currentConfig = floorData[selectedFloor];
